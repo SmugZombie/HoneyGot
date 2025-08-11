@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  waf:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: waf
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Core
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      BAN_TTL_SECONDS: "604800"               # 7 days
+      CANARY_SET_KEY: "honey:creds"
+      BAN_REDIS_PREFIX: "ban:ip:"
+      LOGIN_PATH_REGEX: "^/login$"
+      ORIGIN_HOST: "origin"
+      ORIGIN_PORT: "443"
+
+      # Admin controls
+      ADMIN_TOKEN: "change-me-to-a-very-long-random-secret"
+      ALLOW_ADMIN_CIDRS: "127.0.0.0/8,10.0.0.0/8,192.168.0.0/16,172.25.0.1/32,70.162.124.188/32"
+      ALLOW_IP_CIDRS: ""
+
+      # GEO
+      GEO_MODE: "off"                   # off | allowlist | blocklist
+      GEO_COUNTRIES: "US,CA"
+      GEO_DB_PATH: "/usr/local/share/geo/GeoLite2-Country.mmdb"
+
+    volumes:
+      - ./nginx/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./nginx/lua/:/usr/local/openresty/nginx/lua/:ro
+      - ./certs/:/etc/ssl/waf/:ro
+      - ./geo/:/usr/local/share/geo/:ro
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./redis-data:/data
+
+  origin:
+    build:
+      context: ./origin
+      dockerfile: Dockerfile
+    container_name: origin
+    expose:
+      - "443"
+    ports:
+      - "8443:443"
