@@ -22,11 +22,11 @@ services:
 
       # Admin controls
       ADMIN_TOKEN: "change-me-to-a-very-long-random-secret"
-      ALLOW_ADMIN_CIDRS: "127.0.0.0/8,10.0.0.0/8,192.168.0.0/16,172.25.0.1/32,70.162.124.188/32"
+      ALLOW_ADMIN_CIDRS: "127.0.0.0/8,10.0.0.0/8,192.168.0.0/16,172.0.0.0/8,70.162.124.188/32,173.249.219.0/24"
       ALLOW_IP_CIDRS: ""
 
       # GEO
-      GEO_MODE: "off"                   # off | allowlist | blocklist
+      GEO_MODE: "allowlist"                   # off | allowlist | blocklist
       GEO_COUNTRIES: "US,CA"
       GEO_DB_PATH: "/usr/local/share/geo/GeoLite2-Country.mmdb"
 
@@ -54,3 +54,15 @@ services:
       - "443"
     ports:
       - "8443:443"
+
+  admin-ui:
+    build:
+      context: ./waf-admin-portal   # path to the admin portal folder (with its Dockerfile)
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: "https://bank.zomb.dev"   # default API base baked at build; can override in UI too
+    container_name: admin-ui
+    ports:
+      - "8080:80"                   # host:container
+    depends_on:
+      - waf
